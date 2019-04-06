@@ -1,4 +1,5 @@
 const $RefParser = require('json-schema-ref-parser');
+const exec = require('child_process').exec;
 const SwaggerParser = require('swagger-parser');
 const traverse = require('traverse');
 const urlJoin = require('url-join');
@@ -17,6 +18,7 @@ class SwaggerCombine {
 
   combine() {
     return this.load()
+      .then(() => this.runBefore())
       .then(() => this.filterPaths())
       .then(() => this.filterParameters())
       .then(() => this.renamePaths())
@@ -74,6 +76,22 @@ class SwaggerCombine {
         return this;
       });
   }
+
+  runBefore() {
+    this.schemas = this.schemas.map((schema, idx) => {
+      if (this.apis[idx].runBefore && this.apis[idx].runBefore.length > 0) {
+        console.log("Executing", this.apis[idx].runBefore);
+        exec(this.apis[idx].runBefore, function(error, stdout, stderr) {
+          // command output is in stdout
+          console.log("Error", stderr);
+        });
+      }
+      return schema;
+    });
+
+    return this;
+  }
+
 
   filterPaths() {
     this.schemas = this.schemas.map((schema, idx) => {
